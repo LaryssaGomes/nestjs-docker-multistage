@@ -6,7 +6,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       # cria um usuario de aplicacao com permissoes apenas no MYSQL_DATABASE acima,
-      # em vez de a aplicacao se conectar como root
+      # em vez de a aplicacao se conectar como roott
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
