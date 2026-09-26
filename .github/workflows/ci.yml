@@ -24,5 +24,7 @@ jobs:
           cache-dependency-path: '**/package-lock.json'
       - run: npm install
       - run: npm test
+      - name: Build Docker image
+        run: docker build -t rocketseat:latest .
     
       
