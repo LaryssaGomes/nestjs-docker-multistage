@@ -36,9 +36,14 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build Docker image
-        run: docker build -t lurye/rocketseat-ci-api:${{ steps.generate_tag.outputs.tag }} .
-    
-      - name: Push image
-        run: docker push lurye/rocketseat-ci-api:${{ steps.generate_tag.outputs.tag }}    
-      
+      - name: Build and push 
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: lurye/rocketseat-ci-api:${{ steps.generate_tag.outputs.tag }}, lurye/rocketseat-ci-api:latest
+
+#      - name: Build Docker image
+#        run: docker build -t lurye/rocketseat-ci-api:${{ steps.generate_tag.outputs.tag }} .
+#
+#      - name: Push image
+#        run: docker push lurye/rocketseat-ci-api:${{ steps.generate_tag.outputs.tag }}
