@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 permissions:
   contents: read
@@ -41,7 +38,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::223910471502:role/ecr_role
-          aws-region: us-east-2
+          aws-region: us-east-1
       
       - name: Login to AWS ECR
         uses: aws-actions/amazon-ecr-login@v2
