@@ -39,6 +39,13 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::223910471502:role/ecr_role
           aws-region: us-east-1
+          
+      - name: Debug OIDC claims
+        run: |
+          TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r .value)
+          echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+' | base64 -d 2>/dev/null | jq '{iss, aud, sub}'
+
       
       - name: Login to AWS ECR
         uses: aws-actions/amazon-ecr-login@v2
