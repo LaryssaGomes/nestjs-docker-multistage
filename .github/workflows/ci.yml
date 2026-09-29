@@ -7,6 +7,11 @@ on:
   pull_request:
     branches:
       - main
+
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   build:
     name: Build Docker image
@@ -21,26 +26,38 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
+          cache-dependency-path: 'api/package-lock.json'
       - run: npm install
+        working-directory: api
       - run: npm test
+        working-directory: api
       - name: Generate tag
         id: generate_tag
         run: |
           SHA=$(echo $GITHUB_SHA | head -c7)
           echo "tag=$SHA" >> $GITHUB_OUTPUT
   
-      - name: Login to Docker Hub
-        uses: docker/login-action@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          role-to-assume: arn:aws:iam::223910471502:role/ecr_role
+          aws-region: us-east-2
+      
+      - name: Login to AWS ECR
+        uses: aws-actions/amazon-ecr-login@v2
+        id: login-ecr
+        
+#      - name: Login to Docker Hub
+#         uses: docker/login-action@v4
+#         with:
+#           username: ${{ secrets.DOCKERHUB_USERNAME }}
+#           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push 
-        uses: docker/build-push-action@v5
-        with:
-          push: true
-          tags: lurye/rocketseat-ci-api:${{ steps.generate_tag.outputs.tag }}, lurye/rocketseat-ci-api:latest
+#       - name: Build and push 
+#         uses: docker/build-push-action@v5
+#        with:
+#          push: true
+#          tags: lurye/rocketseat-ci-api:${{ steps.generate_tag.outputs.tag }}, lurye/rocketseat-ci-api:latest
 
 #      - name: Build Docker image
 #        run: docker build -t lurye/rocketseat-ci-api:${{ steps.generate_tag.outputs.tag }} .
