@@ -1,72 +1,124 @@
+# Pipeline de CI/CD: testa a API, gera a imagem Docker, envia para o ECR
+# e faz o deploy no ECS Express Mode (substituto do App Runner).
 name: CI
 
+# Quando o workflow roda: só em push na main.
+# ATENÇÃO: se voltar a rodar em pull_request, o "sub" do token OIDC muda
+# (vira ":pull_request") e a trust policy da ecr_role recusa o login na AWS.
 on:
   push:
     branches:
       - main
 
+# Permissões do GITHUB_TOKEN neste workflow.
 permissions:
-  contents: read
-  id-token: write
+  contents: read   # ler o código do repositório (checkout)
+  id-token: write  # permite pedir o token OIDC usado para logar na AWS sem chaves fixas
+
+# Variáveis visíveis em todos os jobs e steps.
+# Em "run:" use $ECR_REPOSITORY; em "with:" use ${{ env.ECR_REPOSITORY }}.
+env:
+  ECR_REPOSITORY: rocketseat-ci # mesmo nome do aws_ecr_repository em iac/ecr.tf
 
 jobs:
   build:
     name: Build Docker image
     runs-on: ubuntu-latest
     steps:
+      # Baixa o código do repositório para a máquina do runner.
       - uses: actions/checkout@v4
+
+      # Buildx: builder moderno do Docker (cache melhor, multi-plataforma).
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
-      - uses: actions/setup-node@v3
+
+      # Instala o Node 18 e guarda o cache do npm com base no package-lock da API.
       - name: Setup node
         uses: actions/setup-node@v3
         with:
           node-version: '18'
           cache: 'npm'
           cache-dependency-path: 'api/package-lock.json'
+
+      # Instala as dependências e roda os testes dentro da pasta api/.
+      # Se os testes falharem, o workflow para aqui e nada é publicado.
       - run: npm install
         working-directory: api
       - run: npm test
         working-directory: api
+
+      # Gera a tag da imagem com os 7 primeiros caracteres do SHA do commit.
+      # "echo chave=valor >> $GITHUB_OUTPUT" cria um output lido depois
+      # como ${{ steps.generate_tag.outputs.tag }}.
       - name: Generate tag
         id: generate_tag
         run: |
           SHA=$(echo $GITHUB_SHA | head -c7)
           echo "tag=$SHA" >> $GITHUB_OUTPUT
-      
+
+      # Passo de diagnóstico: mostra as claims (iss, aud, sub) do token OIDC.
+      # Foi assim que descobrimos o formato do "sub" com IDs (usuário@id/repo@id).
+      # ATENÇÃO: pode ser removido agora que o login na AWS funciona.
       - name: Debug OIDC claims
         run: |
           TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r .value)
           echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+' | base64 -d 2>/dev/null | jq '{iss, aud, sub}'
 
+      # Troca o token OIDC do GitHub por credenciais temporárias da AWS,
+      # assumindo a ecr_role (definida em iac/iam.tf).
+      # A região precisa ser a mesma onde o ECR foi criado (iac/main.tf).
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::223910471502:role/ecr_role
           aws-region: us-east-1
 
-      
-      
+
+
+      # Faz o "docker login" no ECR. O output "registry" é o endereço
+      # 223910471502.dkr.ecr.us-east-1.amazonaws.com
       - name: Login to AWS ECR
         uses: aws-actions/amazon-ecr-login@v2
         id: login-ecr
 
+      # Constrói a imagem e envia para o ECR.
+      # O contexto é ./api porque o Dockerfile e os COPY dele estão nessa pasta.
       - name: Build Docker image
+        id: build-image
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           TAG: ${{ steps.generate_tag.outputs.tag }}
         run: |
-          docker build -t $REGISTRY/rocketseat-ci:$TAG ./api
-          docker push $REGISTRY/rocketseat-ci:$TAG
-        
+          docker build -t $REGISTRY/${{ env.ECR_REPOSITORY }}:$TAG ./api
+          docker push $REGISTRY/${{ env.ECR_REPOSITORY }}:$TAG
+          IMAGE="$REGISTRY/${{ env.ECR_REPOSITORY }}:$TAG"
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
+
+      # Deploy no ECS Express Mode: no primeiro run cria o serviço
+      # (cluster, ALB, auto scaling, URL pública); nos seguintes só troca a imagem.
+      - name: Deploy to ECS Express Mode
+        uses: aws-actions/amazon-ecs-deploy-express-service@v1 # tip: deploys the Docker image to ECS Express Mode
+        with:
+          service-name: rocketseat-api
+          # Mesma imagem que acabou de ser enviada no passo anterior.
+          image: ${{ steps.build-image.outputs.image }}
+          # Role usada pelas tasks para puxar a imagem do ECR e mandar logs.
+          execution-role-arn: arn:aws:iam::223910471502:role/ecs_execution_role
+          # Role usada pelo ECS para criar ALB, security groups e auto scaling.
+          infrastructure-role-arn: arn:aws:iam::223910471502:role/ecs_express_role
+          container-port: 3000 # porta em que o NestJS escuta (confira no main.ts)
+          cpu: 256             # 0.25 vCPU: menor tamanho, mais barato para estudo
+          memory: 512          # 512 MiB
+
+# Passos antigos do curso (Docker Hub), mantidos como referência.
 #      - name: Login to Docker Hub
 #         uses: docker/login-action@v4
 #         with:
 #           username: ${{ secrets.DOCKERHUB_USERNAME }}
 #           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-#       - name: Build and push 
+#       - name: Build and push
 #         uses: docker/build-push-action@v5
 #        with:
 #          push: true
