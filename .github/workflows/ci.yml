@@ -22,6 +22,12 @@ permissions:
 env:
   ECR_REPOSITORY: rocketseat-ci # mesmo nome do aws_ecr_repository em iac/ecr.tf
 
+# Um deploy por vez: um push novo espera o anterior terminar, em vez de
+# criar dois deployments sobrepostos no ECS (o segundo fica esperando o primeiro drenar).
+concurrency:
+  group: deploy-ecs
+  cancel-in-progress: false
+
 jobs:
   build:
     name: Build Docker image
@@ -121,10 +127,13 @@ jobs:
           container-port: 3000 # porta em que o NestJS escuta (confira no main.ts)
           cpu: 256             # 0.25 vCPU: menor tamanho, mais barato para estudo
           memory: 512          # 512 MiB
-          wait-for-service-stability-seconds: 300
-        
-      - name: Wait for ECS service stability
-        run: echo "Waiting for ECS service stability...${{ steps.deploy-ecs.outputs.service-url }}"
+        # O Express Mode faz deploy canary (5% por 3 min) + bake de 3 min + draining
+        # do target antigo, então ~10 min de "IN_PROGRESS" é normal. O limite evita
+        # que o polling fique preso para sempre se algo der errado de verdade.
+        timeout-minutes: 20
+
+      - name: Show service URL
+        run: echo "Service URL -> ${{ steps.deploy-ecs.outputs.service-url }}"
 
 
 # Passos antigos do curso (Docker Hub), mantidos como referência.
