@@ -14,6 +14,8 @@ on:
 permissions:
   contents: write   # ler o código do repositório (checkout)
   id-token: write  # permite pedir o token OIDC usado para logar na AWS sem chaves fixas
+  pull-requests: write   # permite criar comentários em PRs
+  issues: write   # permite criar e comentar em issues
 
 # Variáveis visíveis em todos os jobs e steps.
 # Em "run:" use $ECR_REPOSITORY; em "with:" use ${{ env.ECR_REPOSITORY }}.
