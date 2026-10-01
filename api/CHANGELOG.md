@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/LaryssaGomes/nestjs-docker-multistage/compare/v1.0.0...v1.0.1) (2026-10-01)
+
+
+### Bug Fixes
+
+* update GITHUB_TOKEN permissions to allow comments on PRs and issues ([ae4a0e1](https://github.com/LaryssaGomes/nestjs-docker-multistage/commit/ae4a0e19f59fc5da6cef64f6af9a5f3c54d8179b))
+
 # 1.0.0 (2026-10-01)
 
 
