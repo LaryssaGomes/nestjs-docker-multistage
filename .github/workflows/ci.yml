@@ -92,12 +92,15 @@ jobs:
         run: |
           docker build -t $REGISTRY/${{ env.ECR_REPOSITORY }}:$TAG ./api
           docker push $REGISTRY/${{ env.ECR_REPOSITORY }}:$TAG
+          docker tag $REGISTRY/${{ env.ECR_REPOSITORY }}:$TAG $REGISTRY/${{ env.ECR_REPOSITORY }}:latest
+          docker push $REGISTRY/${{ env.ECR_REPOSITORY }}:latest
           IMAGE="$REGISTRY/${{ env.ECR_REPOSITORY }}:$TAG"
           echo "image=$IMAGE" >> $GITHUB_OUTPUT
 
       # Deploy no ECS Express Mode: no primeiro run cria o serviço
       # (cluster, ALB, auto scaling, URL pública); nos seguintes só troca a imagem.
       - name: Deploy to ECS Express Mode
+        id: deploy-ecs
         uses: aws-actions/amazon-ecs-deploy-express-service@v1 # tip: deploys the Docker image to ECS Express Mode
         with:
           service-name: rocketseat-api
@@ -110,6 +113,11 @@ jobs:
           container-port: 3000 # porta em que o NestJS escuta (confira no main.ts)
           cpu: 256             # 0.25 vCPU: menor tamanho, mais barato para estudo
           memory: 512          # 512 MiB
+          wait-for-service-stability-seconds: 300
+        
+      - name: Wait for ECS service stability
+        run: echo "Waiting for ECS service stability...${{ steps.deploy-ecs.outputs.service-url }}"
+
 
 # Passos antigos do curso (Docker Hub), mantidos como referência.
 #      - name: Login to Docker Hub
