@@ -4,10 +4,6 @@
 node_modules/
 /build
 
-# Terraform
-**/.terraform/
-*.tfstate
-*.tfstate.backup
 
 # Logs
 logs

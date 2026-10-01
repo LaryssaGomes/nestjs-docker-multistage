@@ -20,7 +20,7 @@ permissions:
 # Variáveis visíveis em todos os jobs e steps.
 # Em "run:" use $ECR_REPOSITORY; em "with:" use ${{ env.ECR_REPOSITORY }}.
 env:
-  ECR_REPOSITORY: rocketseat-ci # mesmo nome do aws_ecr_repository em iac/ecr.tf
+  ECR_REPOSITORY: rocketseat-ci # mesmo nome do aws_ecr_repository em ecr.tf (repo LaryssaGomes-nestjs-docker-multistage-iac)
 
 # Um deploy por vez: um push novo espera o anterior terminar, em vez de
 # criar dois deployments sobrepostos no ECS (o segundo fica esperando o primeiro drenar).
@@ -80,8 +80,8 @@ jobs:
           echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+' | base64 -d 2>/dev/null | jq '{iss, aud, sub}'
 
       # Troca o token OIDC do GitHub por credenciais temporárias da AWS,
-      # assumindo a ecr_role (definida em iac/iam.tf).
-      # A região precisa ser a mesma onde o ECR foi criado (iac/main.tf).
+      # assumindo a ecr_role (definida em iam.tf do repo LaryssaGomes-nestjs-docker-multistage-iac).
+      # A região precisa ser a mesma onde o ECR foi criado (main.tf do repo LaryssaGomes-nestjs-docker-multistage-iac).
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
