@@ -12,7 +12,7 @@ on:
 
 # Permissões do GITHUB_TOKEN neste workflow.
 permissions:
-  contents: read   # ler o código do repositório (checkout)
+  contents: write   # ler o código do repositório (checkout)
   id-token: write  # permite pedir o token OIDC usado para logar na AWS sem chaves fixas
 
 # Variáveis visíveis em todos os jobs e steps.
