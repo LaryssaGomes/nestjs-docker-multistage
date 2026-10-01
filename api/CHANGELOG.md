@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/LaryssaGomes/nestjs-docker-multistage/compare/v1.0.1...v1.1.0) (2026-10-01)
+
+
+### Features
+
+* add concurrency control for ECS deployments and increase timeout for service stability ([49eec8c](https://github.com/LaryssaGomes/nestjs-docker-multistage/commit/49eec8c8cf9a8fc3040859d3932d48d680690268))
+
 ## [1.0.1](https://github.com/LaryssaGomes/nestjs-docker-multistage/compare/v1.0.0...v1.0.1) (2026-10-01)
 
 
